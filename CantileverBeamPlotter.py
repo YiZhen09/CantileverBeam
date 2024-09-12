@@ -1,3 +1,4 @@
+import tkinter as tk
 from tkinter import ttk
 
 import matplotlib.pyplot as plt
@@ -28,12 +29,16 @@ class CantileverBeamPlotter:
             row=2, column=0, columnspan=2, pady=10
         )
 
-        # Create figure area
-        self.figure, self.ax = plt.subplots(figsize=(8, 6))
+        # Modify figure creation part
+        self.figure = plt.Figure(figsize=(8, 6))
+        self.ax = self.figure.add_subplot(111)
         self.canvas = FigureCanvasTkAgg(self.figure, master=master)
         self.canvas.get_tk_widget().grid(
             row=3, column=0, columnspan=2, padx=10, pady=10
         )
+
+        # Add window closing event handling
+        self.master.protocol("WM_DELETE_WINDOW", self.on_closing)
 
     def calculate_deflection(self, x):
         L = self.length.get()
@@ -95,3 +100,14 @@ class CantileverBeamPlotter:
         self.ax.set_title("Cantilever Beam Deflection")
 
         self.canvas.draw()
+
+    def on_closing(self):
+        plt.close("all")  # Close all Matplotlib figures
+        self.master.destroy()  # Destroy Tkinter window
+
+
+# Main program
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = CantileverBeamPlotter(root)
+    root.mainloop()
