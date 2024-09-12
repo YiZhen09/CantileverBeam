@@ -1,0 +1,4 @@
+matplotlib==3.7.1
+numpy==1.24.3
+
+# 只要pip install -r requirements.txt 就可以安裝所有需要的套件
