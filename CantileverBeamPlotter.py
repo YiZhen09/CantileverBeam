@@ -4,6 +4,7 @@ from tkinter import ttk
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.patches import Circle
 
 
 class CantileverBeamPlotter:
@@ -11,39 +12,94 @@ class CantileverBeamPlotter:
         self.master = master
         master.title("Cantilever Beam Plotter")
 
-        # 創建輸入框和標籤
-        ttk.Label(master, text="Beam Length:").grid(row=0, column=0, padx=5, pady=5)
-        self.length_entry = ttk.Entry(master)
-        self.length_entry.grid(row=0, column=1, padx=5, pady=5)
-        self.length_entry.insert(0, "10")  # 默認值
+        # 創建上方框架用於輸入
+        top_frame = ttk.Frame(master)
+        top_frame.grid(row=0, column=0, columnspan=2, padx=10, pady=10, sticky="ew")
 
-        ttk.Label(master, text="Load:").grid(row=1, column=0, padx=5, pady=5)
-        self.load_entry = ttk.Entry(master)
-        self.load_entry.grid(row=1, column=1, padx=5, pady=5)
-        self.load_entry.insert(0, "100")  # 默認值
-
-        # 創建按鈕
-        self.plot_button = ttk.Button(master, text="Solve", command=self.plot)
-        self.plot_button.grid(row=2, column=0, columnspan=2, pady=10)
-
-        # 創建圖形和畫布
-        self.figure = plt.Figure(figsize=(8, 6))
-        self.ax = self.figure.add_subplot(111)
-        self.canvas = FigureCanvasTkAgg(self.figure, master=master)
-        self.canvas.get_tk_widget().grid(
-            row=3, column=0, columnspan=2, padx=10, pady=10, sticky="nsew"
+        # 創建下方框架
+        bottom_frame = ttk.Frame(master)
+        bottom_frame.grid(
+            row=1, column=0, columnspan=2, padx=10, pady=10, sticky="nsew"
         )
 
+        # 在上方框架中添加輸入框和標籤
+        ttk.Label(top_frame, text="Beam Length:").grid(row=0, column=0, padx=5, pady=5)
+        self.length_entry = ttk.Entry(top_frame)
+        self.length_entry.grid(row=0, column=1, padx=5, pady=5)
+        self.length_entry.insert(0, "10")
+
+        ttk.Label(top_frame, text="Load:").grid(row=0, column=2, padx=5, pady=5)
+        self.load_entry = ttk.Entry(top_frame)
+        self.load_entry.grid(row=0, column=3, padx=5, pady=5)
+        self.load_entry.insert(0, "100")
+
+        ttk.Label(top_frame, text="Radius:").grid(row=0, column=4, padx=5, pady=5)
+        self.radius_entry = ttk.Entry(top_frame)
+        self.radius_entry.grid(row=0, column=5, padx=5, pady=5)
+        self.radius_entry.insert(0, "0.05")
+
+        # 創建按鈕
+        self.plot_button = ttk.Button(top_frame, text="Solve", command=self.plot)
+        self.plot_button.grid(row=0, column=6, padx=5, pady=5)
+
+        # 在下方框架中創建左側區域用於梁變形圖
+        left_frame = ttk.Frame(bottom_frame)
+        left_frame.grid(row=0, column=0, padx=5, pady=5, sticky="nsew")
+
+        # 在下方框架中創建右側區域用於斷面圖
+        right_frame = ttk.Frame(bottom_frame)
+        right_frame.grid(row=0, column=1, padx=5, pady=5, sticky="nsew")
+
+        # 創建梁變形圖形和畫布
+        self.figure = plt.Figure(figsize=(6, 4))
+        self.ax = self.figure.add_subplot(111)
+        self.canvas = FigureCanvasTkAgg(self.figure, master=left_frame)
+        self.canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+
+        # 創建截面圖形和畫布
+        self.section_figure = plt.Figure(figsize=(4, 4))
+        self.section_ax = self.section_figure.add_subplot(111)
+        self.section_canvas = FigureCanvasTkAgg(self.section_figure, master=right_frame)
+        self.section_canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+
         # 設置網格權重
-        master.grid_rowconfigure(3, weight=1)
+        master.grid_rowconfigure(1, weight=1)
         master.grid_columnconfigure(0, weight=1)
         master.grid_columnconfigure(1, weight=1)
+        bottom_frame.grid_rowconfigure(0, weight=1)
+        bottom_frame.grid_columnconfigure(0, weight=2)
+        bottom_frame.grid_columnconfigure(1, weight=1)
 
         # 綁定調整大小事件
         self.canvas.get_tk_widget().bind("<Configure>", self.on_resize)
+        self.section_canvas.get_tk_widget().bind("<Configure>", self.on_section_resize)
 
-        # 初始繪製未變形的梁
+        # 初始繪製未變形的梁和截面
         self.plot_undeformed_beam()
+        self.plot_section()
+
+    def plot_section(self):
+        self.section_ax.clear()
+        radius = float(self.radius_entry.get())
+
+        # 繪製圓形截面
+        circle = Circle((0, 0), radius, fill=False)
+        self.section_ax.add_artist(circle)
+
+        # 設置軸範圍和標籤
+        self.section_ax.set_xlim(-radius * 1.2, radius * 1.2)
+        self.section_ax.set_ylim(-radius * 1.2, radius * 1.2)
+        self.section_ax.set_aspect("equal")
+        self.section_ax.set_title("Beam Cross Section")
+        self.section_ax.set_xlabel("Width (m)")
+        self.section_ax.set_ylabel("Height (m)")
+
+        # 更新畫布
+        self.section_canvas.draw()
+
+    def on_section_resize(self, event):
+        # 重新繪製截面圖
+        self.plot_section()
 
     def on_resize(self, event):
         # 重新繪製圖形
@@ -116,6 +172,9 @@ class CantileverBeamPlotter:
 
         # 更新畫布
         self.canvas.draw()
+
+        # 在繪製完主圖後，更新截面圖
+        self.plot_section()
 
     def adjust_plot_limits(self):
         # 獲取當前的軸範圍
